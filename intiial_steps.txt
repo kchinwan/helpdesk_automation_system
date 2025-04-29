@@ -1,0 +1,745 @@
+# **Step 1: Install Rasa**
+#
+# First, you'll need to install Rasa.  It's highly recommended to do this in a virtual environment to keep your project dependencies isolated.
+#
+# **Step 1.1: Create a Virtual Environment (Recommended)**
+#
+# Open your terminal and navigate to the directory where you want to create your project. Then, run the following commands:
+#
+# ```bash
+# python -m venv .venv  # Create a virtual environment named ".venv"
+# source .venv/bin/activate  # Activate the virtual environment (Linux/macOS)
+# .\.venv\Scripts\activate  # Activate the virtual environment (Windows)
+# ```
+#
+# **Step 1.2: Install Rasa Open Source**
+#
+# With your virtual environment activated, install Rasa using pip:
+#
+# ```bash
+# pip install rasa
+# ```
+#
+# **Step 2: Initialize a Rasa Project**
+#
+# Once Rasa is installed, you can create a new project using the `rasa init` command. This will set up the basic project structure and generate some starter files.
+#
+# ```bash
+# rasa init --no-prompt # Use --no-prompt for non-interactive init
+# ```
+#
+# This will create a directory with the following structure:
+#
+# ```
+# ├── actions.py          # Python code for custom actions
+# ├── config.yml         # Configuration file for your Rasa bot
+# ├── data
+# │   ├── nlu.md          # Training data for Natural Language Understanding (NLU)
+# │   └── stories.md      # Training data for dialogue flows (stories)
+# ├── domain.yml         # Defines the bot's domain (intents, entities, slots, responses, actions)
+# └── models            # Where trained models are stored
+# ```
+#
+# **Step 3: Define Intents and Entities in `nlu.md`**
+#
+# Now, let's define the intents and entities that our chatbot needs to understand log queries. Open the `data/nlu.md` file and add the following:
+#
+```markdown
+version: "3.1"
+nlu:
+- intent: greet
+  examples: |
+    - hey
+    - hello
+    - hi
+    - good morning
+    - good evening
+    - hey there
+
+- intent: goodbye
+  examples: |
+    - bye
+    - goodbye
+    - see you later
+    - talk to you later
+    - farewell
+
+- intent: show_logs
+  examples: |
+    - show me the logs
+    - display the logs
+    - get logs
+    - give me the logs
+    - I want to see the logs
+    - find logs
+    - show logs
+
+- intent: filter_logs
+  examples: |
+    - show logs for app {app_name}
+    - show logs for app {app_name} with transaction ID {transaction_id}
+    - show logs from {start_time} to {end_time}
+    - show logs for app {app_name} from {start_time} to {end_time}
+    - show logs with transaction ID {transaction_id}
+    - logs for {app_name}
+    - logs with transaction id {transaction_id}
+    - logs from {start_time}
+    - logs until {end_time}
+    - get logs where app is {app_name}
+    - find logs between {start_time} and {end_time}
+    - give me logs for application {app_name}
+    - display logs with transaction id {transaction_id}
+    - show me the logs for application {app_name} between {start_time} and {end_time}
+
+- intent: find_errors
+  examples: |
+    - show me errors
+    - display errors
+    - get errors
+    - find error logs
+    - list errors
+    - I want to see errors
+    - show error logs
+
+- intent: filter_errors
+  examples: |
+    - show errors for app {app_name}
+    - show errors for app {app_name} with transaction ID {transaction_id}
+    - show errors from {start_time} to {end_time}
+    - errors for {app_name}
+    - errors with transaction id {transaction_id}
+    - errors from {start_time}
+    - errors until {end_time}
+    - get errors where app is {app_name}
+    - find errors between {start_time} and {end_time}
+
+- intent: summarize_logs
+  examples: |
+    - summarize the logs
+    - give me a summary of the logs
+    - summarize logs
+    - tell me what the logs show
+    - can you summarize the log data
+
+- intent: compare_logs
+  examples: |
+    - compare logs from {start_time} to {end_time} with logs from {start_time_2} to {end_time_2} for app {app_name}
+    - compare logs for {app_name_1} and {app_name_2}
+    - compare logs
+    - compare logs of {app_name} and {app_name_2}
+
+- intent: get_status
+  examples: |
+    - what is the status of app {app_name}
+    - show status of {app_name}
+    - application status
+    - status of application {app_name}
+
+- intent: get_help
+  examples: |
+    - help
+    - help me
+    - what can you do
+    - what can I ask you
+    - how to use this bot
+    - what commands are available
+
+- intent: escalate
+  examples: |
+    - talk to a human
+    - talk to support
+    - I need help
+    - connect me to an agent
+    - escalate
+
+```
+#
+# We've defined several intents here:
+# * `greet`, `goodbye`: Standard greeting and farewell intents.
+# * `show_logs`, `filter_logs`: Intents for retrieving and filtering logs.  Note the use of curly braces `{}` to define entities like `app_name`, `transaction_id`, `start_time`, and `end_time`.
+# * `find_errors`, `filter_errors`: Intents to find and filter errors.
+# * `summarize_logs`: Intent to summarize logs.
+# * `compare_logs`: Intent to compare logs
+# * `get_status`: Intent to get the status of an application
+# * `get_help`: Intent to get help.
+# * `escalate`: Intent to escalate.
+#
+# **Step 4: Define the Domain in `domain.yml`**
+#
+# The `domain.yml` file defines the bot's universe, including intents, entities, slots, responses, and actions.  Open `domain.yml` and add the following:
+#
+```yaml
+version: "3.1"
+
+intents:
+  - greet
+  - goodbye
+  - show_logs
+  - filter_logs
+  - find_errors
+  - filter_errors
+  - summarize_logs
+  - compare_logs
+  - get_status
+  - get_help
+  - escalate
+
+entities:
+  - app_name
+  - transaction_id
+  - start_time
+  - end_time
+  - app_name_2 #for compare logs
+  - start_time_2 #for compare logs
+  - end_time_2 #for compare logs
+
+slots:
+  app_name:
+    type: text
+    influence_conversation: true
+  transaction_id:
+    type: text
+    influence_conversation: true
+  start_time:
+    type: text
+    influence_conversation: true
+  end_time:
+    type: text
+    influence_conversation: true
+  app_name_2: #for compare logs
+    type: text
+    influence_conversation: true
+  start_time_2: #for compare logs
+    type: text
+    influence_conversation: true
+  end_time_2: #for compare logs
+    type: text
+    influence_conversation: true
+
+responses:
+  utter_greet:
+  - text: "Hello! How can I help you with your logs today?"
+
+  utter_goodbye:
+  - text: "Goodbye!"
+
+  utter_no_logs_found:
+  - text: "Sorry, I couldn't find any logs matching your criteria."
+
+  utter_error_generic:
+  - text: "I encountered an error while processing your request. Please try again."
+
+  utter_summarize_logs:
+    - text: "Okay, I am summarizing the logs for you"
+
+  utter_compare_logs:
+    - text: "Okay, I am comparing the logs"
+
+  utter_get_status:
+    - text: "Okay, I am fetching the application status for you."
+
+  utter_help:
+    - text: "I can help you with log analysis. You can ask me to show logs, filter logs by application, transaction ID, or time range, find errors, summarize logs, compare logs, and get the application status."
+
+  utter_escalate:
+    - text: "I'm connecting you to a human agent."
+
+actions:
+  - action_query_logs
+  - action_find_errors
+  - action_summarize_logs
+  - action_compare_logs
+  - action_get_status
+  - action_escalate
+  - action_get_help # Add this action
+```
+#
+# We've defined:
+# * `intents`:  The intents we defined in `nlu.md`.
+# * `entities`: The entities we defined in `nlu.md`.
+# * `slots`:  Slots are like variables that hold the values of the entities extracted from the user's input.  For example, the `app_name` slot will hold the value of the `app_name` entity.  `influence_conversation: true` helps Rasa to remember these values.
+# * `responses`:  Canned responses the bot can use.
+# * `actions`:  Custom actions (defined in `actions.py`) that the bot will execute.  Crucially, we have `action_query_logs` to handle the log querying.
+#
+# **Step 5: Define Dialogue Flows (Stories) in `data/stories.md`**
+#
+# Stories define the paths of conversation between the user and the bot.  Open `data/stories.md` and add the following:
+#
+```markdown
+version: "3.1"
+
+stories:
+- story: greet
+  steps:
+  - intent: greet
+  - action: utter_greet
+
+- story: goodbye
+  steps:
+  - intent: goodbye
+  - action: utter_goodbye
+
+- story: show_all_logs
+  steps:
+  - intent: show_logs
+  - action: action_query_logs
+  - action: utter_no_logs_found # Add this
+
+- story: filter_logs_by_app
+  steps:
+  - intent: filter_logs
+    entities:
+    - app_name: "payment" #example
+  - action: action_query_logs
+  - action: utter_no_logs_found # Add this
+
+- story: filter_logs_by_app_and_transaction_id
+  steps:
+  - intent: filter_logs
+    entities:
+    - app_name: "payment" #example
+    - transaction_id: "12345" #example
+  - action: action_query_logs
+  - action: utter_no_logs_found # Add this
+
+- story: filter_logs_by_time_range
+  steps:
+  - intent: filter_logs
+    entities:
+    - start_time: "2023-01-01" #example
+    - end_time: "2023-01-02" #example
+  - action: action_query_logs
+  - action: utter_no_logs_found # Add this
+
+- story: filter_logs_by_app_and_time_range
+  steps:
+  - intent: filter_logs
+    entities:
+    - app_name: "payment" #example
+    - start_time: "2023-01-01" #example
+    - end_time: "2023-01-02" #example
+  - action: action_query_logs
+  - action: utter_no_logs_found # Add this
+
+- story: show_all_errors
+  steps:
+  - intent: find_errors
+  - action: action_find_errors
+  - action: utter_no_logs_found # Add this
+
+- story: filter_errors_by_app
+  steps:
+  - intent: filter_errors
+    entities:
+    - app_name: "payment" #example
+  - action: action_find_errors
+  - action: utter_no_logs_found # Add this
+
+- story: filter_errors_by_app_and_transaction_id
+  steps:
+  - intent: filter_errors
+    entities:
+    - app_name: "payment" #example
+    - transaction_id: "12345" #example
+  - action: action_find_errors
+  - action: utter_no_logs_found # Add this
+
+- story: filter_errors_by_time_range
+  steps:
+  - intent: filter_errors
+    entities:
+    - start_time: "2023-01-01" #example
+    - end_time: "2023-01-02" #example
+  - action: action_find_errors
+  - action: utter_no_logs_found # Add this
+
+- story: summarize_logs
+  steps:
+  - intent: summarize_logs
+  - action: action_summarize_logs
+  - action: utter_summarize_logs # Add this
+
+- story: compare_logs
+  steps:
+  - intent: compare_logs
+  - action: action_compare_logs
+  - action: utter_compare_logs # Add this
+
+- story: get_status
+  steps:
+  - intent: get_status
+  - action: action_get_status
+  - action: utter_get_status # Add this
+
+- story: get_help
+  steps:
+  - intent: get_help
+  - action: action_get_help
+  - action: utter_help
+
+- story: escalate
+  steps:
+  - intent: escalate
+  - action: action_escalate
+  - action: utter_escalate
+```
+#
+# We've defined several stories that cover different conversation flows:
+# * Basic greetings and goodbyes.
+# * Stories for showing and filtering logs, demonstrating how the bot handles different combinations of entities.
+# * Stories for showing and filtering errors.
+# * Stories for summarizing and comparing logs.
+# * Story to get application status
+# * Story to get help
+# * Story to escalate
+#
+# **Step 6: Create Custom Actions in `actions.py`**
+#
+# Now, let's create the custom actions that will interact with your log analysis system.  Open the `actions.py` file.  You'll need to implement the logic to query your Splunk API (or whatever system you're using to store logs) here.  I'll provide a template, but you'll need to fill in the specifics of your environment.
+#
+```python
+import time
+from typing import Any, Dict, List, Text
+import json
+from rasa_sdk import Action, Tracker
+from rasa_sdk.executor import CollectingDispatcher
+from rasa_sdk.events import SlotSet
+
+class ActionQueryLogs(Action):
+    def name(self) -> Text:
+        return "action_query_logs"
+
+    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        """
+        Action to query logs based on user-specified criteria.
+        """
+        app_name = tracker.get_slot("app_name")
+        transaction_id = tracker.get_slot("transaction_id")
+        start_time = tracker.get_slot("start_time")
+        end_time = tracker.get_slot("end_time")
+
+        print(f"ActionQueryLogs: app_name={app_name}, transaction_id={transaction_id}, start_time={start_time}, end_time={end_time}") #debug
+
+        # Construct your Splunk query here.  This is where you'll need to adapt the code to your specific Splunk setup.
+        # The example below is a placeholder and will NOT work without modification.
+        splunk_query = "search index=my_index "  # Replace with your base Splunk query
+        filters = []
+        if app_name:
+            filters.append(f"app_name=\"{app_name}\"")
+        if transaction_id:
+            filters.append(f"transaction_id=\"{transaction_id}\"")
+        if start_time:
+            filters.append(f"_time>=\"{start_time}\"")  #  Splunk uses _time
+        if end_time:
+            filters.append(f"_time<=\"{end_time}\"")    # Splunk uses _time
+
+        if filters:
+            splunk_query += " AND " + " AND ".join(filters)
+        splunk_query += " | head 10" #added limit
+        print(f"Splunk Query: {splunk_query}") #debug
+
+        try:
+            # **Replace this with your actual Splunk API call.**
+            # This is just a placeholder example using a hypothetical 'splunk_api' library.
+            #  You will need to use the Splunk SDK for Python or another appropriate library.
+            #
+            # Example using Splunk SDK (you'll need to install it: pip install splunklib):
+            #
+            # from splunklib.service import connect
+            #
+            # service = connect(
+            #     host="your_splunk_host",
+            #     port=8089,
+            #     username="your_splunk_username",
+            #     password="your_splunk_password")
+            #
+            # search_results = service.jobs.oneshot(splunk_query)
+            # logs = [event for event in search_results]  # Convert to a list of dictionaries
+            #
+            #
+            #  For the placeholder, we'll just return some dummy data:
+            if "error" in splunk_query: #simulating
+                logs = []
+            elif "summarize" in splunk_query:
+                logs = [{"message": "Log summary 1"}, {"message": "Log summary 2"}]
+            elif "compare" in splunk_query:
+                logs = [{"message": "Comparison 1"}, {"message": "Comparison 2"}]
+            elif "status" in splunk_query:
+                logs = [{"status": "running"}, {"cpu_usage": "20%"}]
+            else:
+                logs = [{"timestamp": "2024-07-24 10:00:00", "message": "Log message 1", "app_name": app_name or "default_app", "transaction_id": transaction_id or "default_txid"},
+                        {"timestamp": "2024-07-24 10:00:01", "message": "Log message 2", "app_name": app_name or "default_app", "transaction_id": transaction_id or "default_txid"},
+                        {"timestamp": "2024-07-24 10:00:02", "message": "Log message 3", "app_name": app_name or "default_app", "transaction_id": transaction_id or "default_txid"}] #added default values
+
+
+            if logs:
+                dispatcher.utter_message(text=json.dumps(logs, indent=2))  # Send the logs as a JSON string
+            else:
+                dispatcher.utter_message(response="utter_no_logs_found") #use response
+            return [SlotSet(slot, None) for slot in ["app_name", "transaction_id", "start_time", "end_time"]]  # Clear the slots after use
+
+        except Exception as e:
+            print(f"Error querying Splunk: {e}")
+            dispatcher.utter_message(response="utter_error_generic")
+            return []
+
+class ActionFindErrors(Action):
+    def name(self) -> Text:
+        return "action_find_errors"
+
+    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        """
+        Action to find errors based on user-specified criteria.
+        """
+        app_name = tracker.get_slot("app_name")
+        transaction_id = tracker.get_slot("transaction_id")
+        start_time = tracker.get_slot("start_time")
+        end_time = tracker.get_slot("end_time")
+
+        print(f"ActionFindErrors: app_name={app_name}, transaction_id={transaction_id}, start_time={start_time}, end_time={end_time}") #debug
+
+        #  Construct your Splunk query to find errors.
+        splunk_query = "search index=my_index AND log_level=ERROR "  # Adjust for your Splunk schema
+        filters = []
+        if app_name:
+            filters.append(f"app_name=\"{app_name}\"")
+        if transaction_id:
+            filters.append(f"transaction_id=\"{transaction_id}\"")
+        if start_time:
+            filters.append(f"_time>=\"{start_time}\"")
+        if end_time:
+            filters.append(f"_time<=\"{end_time}\"")
+
+        if filters:
+            splunk_query += " AND " + " AND ".join(filters)
+        splunk_query += " | head 10" #added limit
+        print(f"Splunk Query: {splunk_query}") #debug
+        try:
+            # Replace this with your actual Splunk API call for error logs.
+            #  Similar to ActionQueryLogs, you'll use the Splunk SDK or a library.
+            #
+            # Example (Splunk SDK):
+            # service = connect(...)
+            # search_results = service.jobs.oneshot(splunk_query)
+            # error_logs = [event for event in search_results]
+            #
+            # Placeholder:
+            error_logs = [{"timestamp": "2024-07-24 10:00:05", "message": "Error: Database connection failed", "app_name": app_name or "default_app", "transaction_id": transaction_id or "default_txid"},
+                          {"timestamp": "2024-07-24 10:00:10", "message": "Error: Invalid input", "app_name": app_name or "default_app", "transaction_id": transaction_id or "default_txid"}]
+
+            if error_logs:
+                dispatcher.utter_message(text=json.dumps(error_logs, indent=2))
+            else:
+                dispatcher.utter_message(response="utter_no_logs_found")
+            return [SlotSet(slot, None) for slot in ["app_name", "transaction_id", "start_time", "end_time"]]
+
+        except Exception as e:
+            print(f"Error querying Splunk for errors: {e}")
+            dispatcher.utter_message(response="utter_error_generic")
+            return []
+
+class ActionSummarizeLogs(Action):
+    def name(self) -> Text:
+        return "action_summarize_logs"
+
+    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        """
+        Action to summarize logs.
+        """
+        #  Get slots if needed
+        app_name = tracker.get_slot("app_name")
+        start_time = tracker.get_slot("start_time")
+        end_time = tracker.get_slot("end_time")
+        print(f"ActionSummarizeLogs: app_name={app_name}, start_time={start_time}, end_time={end_time}")
+
+        splunk_query = "search index=my_index  " #base query
+        filters = []
+        if app_name:
+            filters.append(f"app_name=\"{app_name}\"")
+        if start_time:
+            filters.append(f"_time>=\"{start_time}\"")
+        if end_time:
+            filters.append(f"_time<=\"{end_time}\"")
+        if filters:
+            splunk_query += " AND " + " AND ".join(filters)
+        splunk_query += " | stats count by message" #sumarize
+        print(f"Splunk Query: {splunk_query}")
+        try:
+            # Replace with your Splunk query for summarization
+            #  Example:
+            # service = connect(...)
+            # search_results = service.jobs.oneshot(splunk_query)
+            # summary = ...  # Extract summary from results
+            #
+            # Placeholder:
+            summary = [{"summary": "Total logs: 120", "errors": "5", "warnings": "10"}]  # Example summary data
+            if summary:
+                dispatcher.utter_message(text=json.dumps(summary, indent=2))
+            else:
+                dispatcher.utter_message(response="utter_no_logs_found")
+            return []
+        except Exception as e:
+            print(f"Error summarizing logs: {e}")
+            dispatcher.utter_message(response="utter_error_generic")
+            return []
+
+class ActionCompareLogs(Action):
+    def name(self) -> Text:
+        return "action_compare_logs"
+
+    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        """
+        Action to compare logs from two time ranges (or apps).
+        """
+        app_name = tracker.get_slot("app_name")
+        app_name_2 = tracker.get_slot("app_name_2")
+        start_time = tracker.get_slot("start_time")
+        end_time = tracker.get_slot("end_time")
+        start_time_2 = tracker.get_slot("start_time_2")
+        end_time_2 = tracker.get_slot("end_time_2")
+
+        print(f"ActionCompareLogs: app_name={app_name}, app_name_2={app_name_2}, start_time={start_time}, end_time={end_time}, start_time_2={start_time_2}, end_time_2={end_time_2}")
+
+        # Construct Splunk query (or queries) for comparison
+        # Example logic:
+        if app_name and app_name_2:
+            splunk_query_1 = f"search index=my_index app_name=\"{app_name}\" | stats count as count1"
+            splunk_query_2 = f"search index=my_index app_name=\"{app_name_2}\" | stats count as count2"
+            splunk_query = f"{splunk_query_1} | append [{splunk_query_2}]"
+        elif start_time and end_time and start_time_2 and end_time_2:
+            splunk_query_1 = f"search index=my_index _time>=\"{start_time}\" AND _time<=\"{end_time}\" | stats count as count1"
+            splunk_query_2 = f"search index=my_index _time>=\"{start_time_2}\" AND _time<=\"{end_time_2}\" | stats count as count2"
+            splunk_query = f"{splunk_query_1} | append [{splunk_query_2}]"
+        else:
+            splunk_query = "search index=my_index | stats count by app_name" #default
+        print(f"Splunk Query: {splunk_query}")
+
+        try:
+            # Replace with your Splunk API calls for comparison
+            # service = connect(...)
+            # results1 = service.jobs.oneshot(splunk_query_1)
+            # results2 = service.jobs.oneshot(splunk_query_2)
+            # comparison_data = ...  # Process results for comparison
+            #
+            # Placeholder:
+            comparison_data = [{"app_1_logs": 100, "app_2_logs": 150, "comparison": "App 2 has 50 more logs"}, {"time_range_1_logs": 200, "time_range_2_logs": 300, "comparison": "Time range 2 has 100 more logs"}]
+            if comparison_data:
+                dispatcher.utter_message(text=json.dumps(comparison_data, indent=2))
+            else:
+                 dispatcher.utter_message(response="utter_no_logs_found")
+            return []
+        except Exception as e:
+            print(f"Error comparing logs: {e}")
+            dispatcher.utter_message(response="utter_error_generic")
+            return []
+
+class ActionGetStatus(Action):
+    def name(self) -> Text:
+        return "action_get_status"
+
+    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        """
+        Action to get the status of an application.
+        """
+        app_name = tracker.get_slot("app_name")
+        print(f"ActionGetStatus: app_name={app_name}")
+        splunk_query = f"search index=my_index app_name=\"{app_name}\" | stats count, avg(cpu_usage) by app_name" #example query
+        print(f"Splunk Query: {splunk_query}")
+        try:
+            # Replace with your Splunk API call to get application status
+            # service = connect(...)
+            # status_results = service.jobs.oneshot(splunk_query)
+            # app_status = ...  # Extract status from results
+            #
+            # Placeholder:
+            app_status = [{"app_name": app_name, "status": "running", "cpu_usage": "25%", "memory_usage": "60%"}] #example
+            if app_status:
+                dispatcher.utter_message(text=json.dumps(app_status, indent=2))
+            else:
+                dispatcher.utter_message(response="utter_no_logs_found")
+            return []
+        except Exception as e:
+            print(f"Error getting application status: {e}")
+            dispatcher.utter_message(response="utter_error_generic")
+            return []
+
+class ActionEscalate(Action):
+    def name(self) -> Text:
+        return "action_escalate"
+
+    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        """
+        Action to escalate the conversation to a human agent.
+        """
+        dispatcher.utter_message(text="Okay, I'm connecting you to a human agent.")
+        #  Add code here to connect to a human agent (e.g., via a support ticket system, live chat API, etc.)
+        #  This is highly dependent on your specific setup.
+        time.sleep(2) #simulate
+        dispatcher.utter_message(text="You are now connected to support.")
+        return []
+
+class ActionGetHelp(Action): #addded
+    def name(self) -> Text:
+        return "action_get_help"
+
+    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        dispatcher.utter_message(response="utter_help")
+        return []
+
+```
+#
+# **Key Points:**
+# * Each action class inherits from `Action`.
+# * The `name()` method returns the name of the action (which must match the name in `domain.yml`).
+# * The `run()` method is where the action's logic is implemented.  It takes three arguments:
+#     * `dispatcher`: Used to send messages back to the user.
+#     * `tracker`:  Used to access the current state of the conversation (including slots).
+#     * `domain`:  The bot's domain.
+# * We use `tracker.get_slot()` to retrieve the values of the entities extracted from the user's input.
+# * **Crucially, you'll need to replace the placeholder code for querying Splunk with your actual Splunk API calls.** Use the Splunk SDK for Python (`splunklib`) or another appropriate library.  You'll need to construct the correct Splunk Query Language (SPL) queries based on the extracted entities.
+# * The actions use `dispatcher.utter_message()` to send the query results or other responses to the user.  The results are formatted as JSON for easy parsing.
+# * Slots are cleared after use.
+# * Error handling is included.
+#
+# **Step 7: Train the Rasa Model**
+#
+# Now that you've defined your NLU data, domain, stories, and actions, you need to train the Rasa model.  Run the following command in your terminal:
+#
+# ```bash
+# rasa train
+# ```
+#
+# This command will train the NLU model and the dialogue management model and save them in the `models` directory.
+#
+# **Step 8: Test the Chatbot**
+#
+# Once the model is trained, you can test it using the `rasa shell` command:
+#
+# ```bash
+# rasa shell
+# ```
+#
+# This will start a command-line interface where you can chat with your bot.  Try entering some log queries and see how the bot responds.  For example:
+#
+# * "Show me logs for app payment"
+# * "Show me logs from 2024-01-01 to 2024-01-03"
+# * "What is the status of app auth"
+#
+# **Step 9: Connect to a Chat Interface (Optional)**
+#
+# To make your chatbot accessible to users, you'll need to connect it to a chat interface, such as a web application, Slack, or another messaging platform.  Rasa provides several ways to do this:
+# * **Rasa Webchat:** A simple web chat widget that you can embed in your website.
+# * **Rasa REST API:** A REST API that allows you to connect your chatbot to any chat interface.
+# * **Rasa connectors:** Integrations with various messaging platforms like Slack, Facebook Messenger, and more.
+#
+# The specific steps for connecting to a chat interface will depend on the platform you choose.  Refer to the Rasa documentation for detailed instructions: [https://rasa.com/docs/rasa](https://rasa.com/docs/rasa)
+#
+# **Important Considerations for Production**
+#
+# * **Splunk Authentication:** In a production environment, you'll need to handle Splunk authentication securely (e.g., using API keys, not hardcoding credentials).
+# * **Error Handling and Logging:** Implement robust error handling and logging to track errors and debug issues.
+# * **Scalability:** Consider the scalability of your Rasa deployment and your Splunk infrastructure to handle a large volume of user queries.
+# * **Security:** Ensure that your chatbot and your log analysis system are secure and protect sensitive data.
+# * **NLU Performance:** Continuously monitor the performance of your NLU model and retrain it with new data as needed to maintain accuracy.
+#
+# Let me know if you have any questions or would like to dive deeper into any of these steps.
