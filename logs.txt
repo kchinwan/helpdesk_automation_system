@@ -1,0 +1,5 @@
+index="ei_qa_mule_apps" | spath eventType | search eventType=ERROR, failureType=DATA NOT "end-of-input at root"
+ 
+index="ei_dev_mule_apps" | spath eventType | search eventType= ERROR, failureType=SYSTEM, "metadata.environment"="dev*", "notificationDetails.enabled"=*
+ 
+index="ei_qa_mule_apps" | spath eventType | search eventType=ERROR
