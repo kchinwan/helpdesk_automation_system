@@ -3,3 +3,44 @@ index="ei_qa_mule_apps" | spath eventType | search eventType=ERROR, failureType=
 index="ei_dev_mule_apps" | spath eventType | search eventType= ERROR, failureType=SYSTEM, "metadata.environment"="dev*", "notificationDetails.enabled"=*
  
 index="ei_qa_mule_apps" | spath eventType | search eventType=ERROR
+ 
+index="ei_prod_mule_apps" | spath eventType | search eventType=ERROR, failureType=DATA NOT "end-of-input at root"
+ 
+index="ei_prod_axway_alerts" | spath eventType | search eventType=ERROR, failureType=* | dedup metadata.customMetadata.Route
+ 
+index=* "No space left on device" source="http:SPLUNK_HEC_MULE_APPS_PROD_EVENTS"
+ 
+index=* source="http:SPLUNK_HEC_MULE_APPS_PROD_EVENTS"
+ 
+index="ei_dev_mule_apps" | spath eventType | search eventType= ERROR, failureType=DATA, "metadata.environment"="dev*", "notificationDetails.enabled"=*
+ 
+index="ei_qa_mule_apps" | spath eventType | search eventType=ERROR, failureType=DATA NOT "end-of-input at root"
+ 
+index=* "DatabaseException" "Connection Dead" source="http:SPLUNK_HEC_*_PROD_EVENTS"
+ 
+index=* | spath eventType | search eventType=ERROR
+ 
+index="ei_prod_mule_apps"  ea10037 panels "metadata.target"="BSNA CPQ" "metadata.source"=SelectionNavigator "metadata.appName"="ea10037-bts-selnavbtsna-v1-prod"
+ 
+index="ei_prod_mule_apps" "metadata.appName"="i10025-bts-sapbe-pub-v1-prod"
+ 
+index="ei_prod_mule_apps" "metadata.interfaceId"=I10020
+ 
+index="ei_prod_mule_apps" * extracted_eventType=ERROR failureType=SYSTEM "metadata.interfaceId" != "I00003" "metadata.interfaceId" != "PA00002" "metadata.interfaceId" != "PA00021" "metadata.interfaceId" != "PA00022" "metadata.interfaceId" != "SA00015"| table metadata.originalClientName, metadata.appName, metadata.interfaceId, metadata.businessObject, metadata.source, metadata.target, failureType, errors{}.type,errors{}.description, errors{}.cause, errors{}.detailedDescription,notificationDetails.enabled,notificationDetails.notificationType| stats count by metadata.appName,metadata.interfaceId,metadata.source,metadata.target,metadata.businessObject,errors{}.type,metadata.originalClientName,notificationDetails.enabled,notificationDetails.notificationType|eval Unique_Id='metadata.source'."-".'metadata.target'."-".'metadata.businessObject'."-".'metadata.interfaceId'|eval Unique_Id_2='metadata.interfaceId'."-".'metadata.source'."-".'metadata.target'."-".'metadata.businessObject'|sort by count desc
+ 
+index="ei_prod_mule_apps" *CI_I_117_Create_Update_Activity_in_Xamarin*
+ 
+index="ei_prod_mule_apps" *_I_110-1*
+ 
+ 
+index 
+ei_prod_mule_apps
+ei_qa_wmb	
+ei_qa_mule_apps	
+ei_wmb_idx	
+ei_dev_mule_apps
+ei_dev_axway_apps
+ei_qa_oic_apps	
+ei_dev_oic_apps	
+ei_prod_tms
+ei_prod_oic_apps
