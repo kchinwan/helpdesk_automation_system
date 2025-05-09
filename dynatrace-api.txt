@@ -1,0 +1,126 @@
+# Import necessary libraries
+import requests  # For API requests
+import json  # For handling JSON data
+import pandas as pd  # For working with dataframes
+import numpy as np  # For numerical operations
+from datetime import datetime, timedelta  # To handle date/time formatting
+import warnings  # To suppress warnings
+
+# Disable unnecessary warnings
+warnings.filterwarnings('ignore')
+
+# Dynatrace API configuration
+headers = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': '***'
+}
+
+
+
+# Dynatrace API URL
+dynatrace_api_url = "https://upc02393.live.dynatrace.com/api/v2/metrics/query?metricSelector=builtin%3Ahost.cpu.usage%2Cbuiltin%3Ahost.mem.usage%2Cbuiltin%3Ahost.disk.usedPct%2Cbuiltin%3Ahost.disk.writeOps%2Cbuiltin%3Ahost.disk.readOps&entitySelector=entityId%28%22HOST-115AF0E56D335A15%22%2C%22HOST-1845C9FF9337A73B%22%2C%20%22HOST-335467B2B5124775%22%2C%22HOST-4A822A9BC9D5CFCF%22%2C%22HOST-5AFD019513A70E90%22%2C%22HOST-6D1335132BB46AEF%22%2C%22HOST-9007A059DC4A86DC%22%2C%22HOST-B664CE25B3B82D6F%22%2C%22HOST-BD685494AD3ACE19%22%2C%22HOST-C3C035CB3EA464A5%22%2C%22HOST-C470DCDB1CA4F0A7%22%2C%22HOST-C9A710534A9F6505%22%2C%22HOST-CB80D9A68FCD809C%22%2C%22HOST-D29718BC4AFE2785%22%2C%22HOST-DF751A22A724A8A2%22%2C%22HOST-E96E0D2D78BF9C14%22%2C%22HOST-F52B15BB4B4D209D%22%2C%22HOST-F65C581A67D29A27%22%29"
+
+# Define the time range for fetching data
+start_time = datetime.strptime("2025-04-26T00:00:00.000Z", "%Y-%m-%dT%H:%M:%S.%fZ")
+end_time = datetime.strptime("2025-04-26T23:00:00.000Z", "%Y-%m-%dT%H:%M:%S.%fZ")
+
+# Format the time range for API request
+start_time = start_time.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+end_time = end_time.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+
+# List of host IDs
+entity_ids = [
+    'HOST-115AF0E56D335A15'
+]
+
+# List of metric types to fetch
+metric_types = [
+    "cpu.usage",
+    "memory.usage",
+    "disk.usedPct",
+    "disk.readOps",
+    "disk.writeOps"
+]
+
+# Initialize a set to track unique entries and avoid duplicates
+seen = set()
+data = []  # Initialize an empty list to store the data
+
+# Loop through each entity (host) and each metric type to query data
+for entity_id in entity_ids:
+    for metric in metric_types:
+        # Define query parameters for the API request
+        params = {
+            #"metricSelector": f"builtin:host.{metric}",
+            #"entitySelector": f"entityId({entity_id})",
+            "from": start_time,
+            "to": end_time,
+            "resolution": "1m"
+        }
+
+        # Make the API request
+        response = requests.get(dynatrace_api_url, headers=headers, params=params, verify=False)
+
+        if response.status_code == 200:
+            result = response.json()  # Parse the JSON response
+
+            # Extract relevant information from the API result
+            for data_item in result.get('result', []):
+                metricid = data_item['metricId']
+                for item in data_item['data']:
+                    metricPath = metricid
+
+                    # Mapping metric paths to human-readable names
+                    metric_mapping = {
+                        "cpu.usage": "CPU Usage %",
+                        "memory.usage": "Memory Usage %",
+                        "disk.usedPct": "Disk Usage %",
+                        "disk.readOps": "Disk Read Ops %",
+                        "disk.writeOps": "Disk Write Ops %"
+                    }
+
+                    metricType = metric_mapping.get(metric, metricPath)
+                    hostId = item['dimensions'][0]
+                    valuesList = item['values']
+                    timestampsList = item['timestamps']
+
+                    # Iterate over timestamps and values
+                    for i in range(len(timestampsList)):
+                        timestamps = timestampsList[i]
+                        values = valuesList[i]
+
+                        # Create a unique identifier for each data entry
+                        entry_key = (hostId, timestamps, metricType, values)
+
+                        # Ensure no duplicate entries are added
+                        if entry_key not in seen:
+                            seen.add(entry_key)  # Mark as seen
+                            data.append({
+                                'host': hostId,
+                                'timestamp': timestamps,
+                                'value': values,
+                                'metricType': metricType,
+                                'CI_Type': 'Host'
+                            })
+        else:
+            print(f"API Error for {entity_id} with metric {metric}")
+
+# Convert the collected data into a Pandas DataFrame
+df = pd.DataFrame(data)
+df = df[df['host']=='HOST-115AF0E56D335A15']
+# Convert Unix timestamp (milliseconds) to readable datetime
+df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+
+# Localize to UTC and then convert to Asia/Kolkata
+#df['timestamp'] = df['timestamp'].dt.tz_localize('UTC')
+
+print(df['timestamp'])
+df.to_csv('dynatrace_2604.csv')
+# Display the first few rows to verify the output
+print(df.head())
+
+print("Data retrieval complete!")
+
+
+
